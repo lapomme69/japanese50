@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>일본어 가나 음성 퀴즈 게임 V12.2</title>
+  <title>일본어 가나 음성 퀴즈 게임 V12.3</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #f0f4f8; padding: 20px; margin: 0; }
     .card { 
@@ -57,12 +57,49 @@
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
+    /* 음성인식 파형 애니메이션 그래프 */
+    .wave-container {
+      width: 100%;
+      height: 36px;
+      background: #0f172a;
+      border-radius: 8px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+    .wave-bar {
+      width: 6px;
+      height: 8px;
+      background-color: #38bdf8;
+      border-radius: 3px;
+      transition: height 0.1s ease;
+    }
+    .wave-container.active .wave-bar {
+      animation: soundWave 1.2s ease-in-out infinite;
+    }
+    .wave-container.active .wave-bar:nth-child(1) { animation-delay: 0.0s; }
+    .wave-container.active .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-container.active .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    .wave-container.active .wave-bar:nth-child(4) { animation-delay: 0.2s; }
+    .wave-container.active .wave-bar:nth-child(5) { animation-delay: 0.0s; }
+
+    @keyframes soundWave {
+      0%, 100% { height: 8px; }
+      50% { height: 26px; }
+    }
+
+    /* 5초 프로그레스바 및 숫자 타이머 */
+    .timer-text { font-size: 16px; color: #ef4444; font-weight: bold; margin-top: 4px; min-height: 22px; }
     .progress-container {
       width: 100%;
       background-color: #e2e8f0;
       border-radius: 10px;
-      height: 10px;
-      margin: 10px 0 5px 0;
+      height: 8px;
+      margin: 6px 0;
       overflow: hidden;
       display: none;
     }
@@ -71,27 +108,7 @@
       width: 100%;
       background-color: #ef4444;
       border-radius: 10px;
-      transition: width 0.05s linear;
-    }
-
-    .visualizer-container {
-      width: 100%;
-      height: 24px;
-      background: #0f172a;
-      border-radius: 8px;
-      margin: 10px 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 10px;
-      box-sizing: border-box;
-    }
-    .volume-meter {
-      height: 10px;
-      width: 0%;
-      background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
-      border-radius: 5px;
-      transition: width 0.05s ease-out;
+      transition: width 0.1s linear;
     }
 
     .status { margin-top: 8px; font-size: 14px; color: #475569; font-weight: bold; min-height: 36px; line-height: 1.4; word-break: keep-all; }
@@ -113,10 +130,17 @@
       ▶ 시작
     </button>
     
-    <div class="visualizer-container">
-      <div class="volume-meter" id="volumeMeter"></div>
+    <!-- 음성인식 파형 그래프 -->
+    <div class="wave-container" id="waveContainer">
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
     </div>
-    
+
+    <!-- 타이머 수치 및 진행바 -->
+    <div class="timer-text" id="timerText"></div>
     <div class="progress-container" id="progressContainer">
       <div class="progress-bar" id="progressBar"></div>
     </div>
@@ -129,9 +153,9 @@
 
   <script>
     const hData = [
-      {k: "あ", a: ["아", "a", "あ"]}, {k: "い", a: ["이", "i", "い"]}, {k: "う", a: ["우", "u", "우"]}, {k: "え", a: ["에", "e", "え"]}, {k: "お", a: ["오", "o", "お"]},
+      {k: "あ", a: ["아", "a", "あ"]}, {k: "い", a: ["이", "i", "い"]}, {k: "う", a: ["우", "u", "う"]}, {k: "え", a: ["에", "e", "え"]}, {k: "お", a: ["오", "o", "お"]},
       {k: "か", a: ["카", "ka", "か"]}, {k: "き", a: ["키", "ki", "き"]}, {k: "く", a: ["쿠", "ku", "く"]}, {k: "け", a: ["케", "ke", "け"]}, {k: "こ", a: ["코", "ko", "こ"]},
-      {k: "さ", a: ["사", "sa", "사"]}, {k: "し", a: ["시", "shi", "し"]}, {k: "す", a: ["스", "su", "스"]}, {k: "せ", a: ["세", "se", "せ"]}, {k: "そ", a: ["소", "so", "そ"]},
+      {k: "さ", a: ["사", "sa", "さ"]}, {k: "し", a: ["시", "shi", "し"]}, {k: "す", a: ["스", "su", "す"]}, {k: "せ", a: ["세", "se", "せ"]}, {k: "そ", a: ["소", "so", "そ"]},
       {k: "た", a: ["타", "ta", "た"]}, {k: "ち", a: ["치", "chi", "ち"]}, {k: "つ", a: ["츠", "tsu", "つ"]}, {k: "て", a: ["테", "te", "て"]}, {k: "と", a: ["토", "to", "と"]},
       {k: "な", a: ["나", "na", "나"]}, {k: "に", a: ["니", "ni", "に"]}, {k: "ぬ", a: ["누", "nu", "ぬ"]}, {k: "ね", a: ["네", "ne", "네"]}, {k: "の", a: ["노", "no", "の"]}
     ];
@@ -150,8 +174,6 @@
     let isAnswered = false;
     let timerInterval = null, timeoutId = null;
 
-    let audioContext = null, analyser = null, microphone = null, javascriptNode = null, mediaStream = null;
-
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
@@ -161,7 +183,7 @@
       recognition = new SpeechRecognition();
       recognition.lang = 'ko-KR';
       recognition.interimResults = true;
-      recognition.continuous = false; // 안드로이드 WebView 안정성을 위해 단발성 처리
+      recognition.continuous = false;
 
       recognition.onresult = function(event) {
         if (!isListening || isAnswered) return;
@@ -180,10 +202,6 @@
 
       recognition.onerror = function(e) {
         console.log("음성인식 에러:", e.error);
-        if (e.error === 'not-allowed') {
-          document.getElementById("status").innerText = "❌ 마이크 권한이 차단되어 있습니다. 앱 설정에서 허용해 주세요.";
-          stopListeningUI();
-        }
       };
 
       recognition.onend = function() {
@@ -211,7 +229,7 @@
       }
     }
 
-    async function startQuizSession() {
+    function startQuizSession() {
       if (!SpeechRecognition) {
         alert("현재 브라우저가 음성 인식을 지원하지 않습니다.");
         return;
@@ -223,11 +241,6 @@
         return;
       }
 
-      // 모바일 오디오 자원 잠금 강제 해제 (iOS/Android 공통 해결법)
-      if (audioContext && audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
       isListening = true;
       isAnswered = false;
 
@@ -235,67 +248,23 @@
       startBtn.innerText = "🎙️ 음성인식 중...";
       startBtn.className = "btn-large start-btn listening";
 
-      // 마이크 자원 획득
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        setupAudioVisualizer(mediaStream);
-      } catch (err) {
-        console.log("마이크 스트림 실패:", err);
-        document.getElementById("status").innerText = "❌ 마이크를 활성화할 수 없습니다. 권한 설정을 확인해 주세요.";
-        stopListeningUI();
-        return;
-      }
+      // 그래프 애니메이션 활성화
+      document.getElementById("waveContainer").classList.add("active");
 
-      // 음성 인식 엔진 생성 및 작동
+      // 음성 인식 실행
       if (!recognition) initSpeechEngine();
-      try {
-        recognition.stop();
-      } catch(e) {}
-
+      try { recognition.stop(); } catch(e) {}
+      
       setTimeout(() => {
         try {
           recognition.start();
         } catch(e) {
-          console.log("인식 시작 오류:", e);
+          console.log("인식 시작 에러:", e);
         }
-      }, 100);
+      }, 50);
 
+      // 5초 타이머 작동
       run5SecTimer();
-    }
-
-    function setupAudioVisualizer(stream) {
-      try {
-        if (!audioContext) {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        analyser = audioContext.createAnalyser();
-        microphone = audioContext.createMediaStreamSource(stream);
-        javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
-
-        analyser.smoothingTimeConstant = 0.5;
-        analyser.fftSize = 1024;
-
-        microphone.connect(analyser);
-        analyser.connect(javascriptNode);
-        javascriptNode.connect(audioContext.destination);
-
-        javascriptNode.onaudioprocess = function() {
-          if (!isListening) return;
-          const array = new Uint8Array(analyser.frequencyBinCount);
-          analyser.getByteFrequencyData(array);
-          let values = 0;
-
-          for (let i = 0; i < array.length; i++) {
-            values += array[i];
-          }
-
-          const average = values / array.length;
-          const volumePercent = Math.min(100, Math.max(0, average * 3));
-          document.getElementById("volumeMeter").style.width = volumePercent + "%";
-        };
-      } catch(e) {
-        console.log("시각화 실패:", e);
-      }
     }
 
     function run5SecTimer() {
@@ -306,6 +275,8 @@
 
       const pContainer = document.getElementById("progressContainer");
       const pBar = document.getElementById("progressBar");
+      const timerText = document.getElementById("timerText");
+      
       pContainer.style.display = "block";
       pBar.style.width = "100%";
 
@@ -314,8 +285,11 @@
 
       timerInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
-        const remainingPercent = Math.max(0, 100 - (elapsed / duration) * 100);
-        pBar.style.width = remainingPercent + "%";
+        const remainingMs = Math.max(0, duration - elapsed);
+        const remainingSec = (remainingMs / 1000).toFixed(1);
+        
+        timerText.innerText = `남은 시간: ${remainingSec}초`;
+        pBar.style.width = (remainingMs / duration * 100) + "%";
 
         if (elapsed >= duration) {
           clearInterval(timerInterval);
@@ -351,15 +325,13 @@
         try { recognition.stop(); } catch(e) {}
       }
 
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-      }
-
       const startBtn = document.getElementById("startBtn");
       startBtn.innerText = "▶ 시작";
       startBtn.className = "btn-large start-btn";
-      document.getElementById("volumeMeter").style.width = "0%";
+      
+      document.getElementById("waveContainer").classList.remove("active");
       document.getElementById("progressContainer").style.display = "none";
+      document.getElementById("timerText").innerText = "";
     }
 
     function stopQuiz() {
