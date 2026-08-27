@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>일본어 가나 음성 퀴즈 게임 V12.5</title>
+  <title>일본어 가나 음성 퀴즈 게임 V12.6</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #f0f4f8; padding: 20px; margin: 0; }
     .card { 
@@ -57,7 +57,6 @@
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
-    /* 음성인식 파형 애니메이션 */
     .wave-container {
       width: 100%;
       height: 40px;
@@ -93,7 +92,6 @@
       50% { height: 28px; }
     }
 
-    /* 5초 타이머 */
     .timer-text { font-size: 16px; color: #ef4444; font-weight: bold; margin-top: 4px; min-height: 22px; }
     .progress-container {
       width: 100%;
@@ -112,8 +110,7 @@
       transition: width 0.05s linear;
     }
 
-    .status { margin-top: 8px; font-size: 14px; color: #475569; font-weight: bold; min-height: 36px; line-height: 1.4; word-break: keep-all; }
-    .debug-text { font-size: 13px; color: #2563eb; margin-top: 4px; font-weight: normal; }
+    .status { margin-top: 8px; font-size: 14px; color: #475569; font-weight: bold; min-height: 24px; line-height: 1.4; word-break: keep-all; }
     .result { font-weight: bold; margin-top: 8px; font-size: 18px; min-height: 28px; }
     .score { margin-top: 10px; font-weight: bold; color: #475569; font-size: 16px; }
   </style>
@@ -131,7 +128,6 @@
       ▶ 시작
     </button>
     
-    <!-- 파형 애니메이션 -->
     <div class="wave-container" id="waveContainer">
       <div class="wave-bar"></div>
       <div class="wave-bar"></div>
@@ -140,14 +136,12 @@
       <div class="wave-bar"></div>
     </div>
 
-    <!-- 타이머 표시 영역 -->
     <div class="timer-text" id="timerText"></div>
     <div class="progress-container" id="progressContainer">
       <div class="progress-bar" id="progressBar"></div>
     </div>
 
-    <div class="status" id="status">[시작] 버튼을 누르면 5초간 음성 인식이 진행됩니다</div>
-    <div class="debug-text" id="debugText"></div>
+    <div class="status" id="status">[시작] 버튼을 누르면 퀴즈가 시작됩니다.</div>
     <div class="result" id="result"></div>
     <div class="score">남은 글자: <span id="score">0</span></div>
   </div>
@@ -156,7 +150,7 @@
     const hData = [
       {k: "あ", a: ["아", "a", "あ"]}, {k: "い", a: ["이", "i", "い"]}, {k: "う", a: ["우", "u", "う"]}, {k: "え", a: ["에", "e", "え"]}, {k: "お", a: ["오", "o", "お"]},
       {k: "か", a: ["카", "ka", "か"]}, {k: "き", a: ["키", "ki", "き"]}, {k: "く", a: ["쿠", "ku", "く"]}, {k: "け", a: ["케", "ke", "け"]}, {k: "こ", a: ["코", "ko", "こ"]},
-      {k: "さ", a: ["사", "sa", "사"]}, {k: "し", a: ["시", "shi", "し"]}, {k: "す", a: ["스", "su", "す"]}, {k: "せ", a: ["세", "se", "せ"]}, {k: "そ", a: ["소", "so", "そ"]},
+      {k: "さ", a: ["사", "sa", "さ"]}, {k: "し", a: ["시", "shi", "し"]}, {k: "す", a: ["스", "su", "す"]}, {k: "せ", a: ["세", "se", "せ"]}, {k: "そ", a: ["소", "so", "そ"]},
       {k: "た", a: ["타", "ta", "た"]}, {k: "ち", a: ["치", "chi", "ち"]}, {k: "つ", a: ["츠", "tsu", "つ"]}, {k: "て", a: ["테", "te", "て"]}, {k: "と", a: ["토", "to", "と"]},
       {k: "な", a: ["나", "na", "나"]}, {k: "に", a: ["니", "ni", "に"]}, {k: "ぬ", a: ["누", "nu", "ぬ"]}, {k: "ね", a: ["네", "ne", "네"]}, {k: "の", a: ["노", "no", "の"]}
     ];
@@ -164,7 +158,7 @@
     const kData = [
       {k: "ア", a: ["아", "a", "ア"]}, {k: "イ", a: ["이", "i", "イ"]}, {k: "ウ", a: ["우", "u", "ウ"]}, {k: "エ", a: ["에", "e", "エ"]}, {k: "オ", a: ["오", "o", "オ"]},
       {k: "カ", a: ["카", "ka", "カ"]}, {k: "キ", a: ["키", "ki", "キ"]}, {k: "ク", a: ["쿠", "ku", "ク"]}, {k: "ケ", a: ["케", "ke", "ケ"]}, {k: "コ", a: ["코", "ko", "コ"]},
-      {k: "サ", a: ["사", "sa", "サ"]}, {k: "シ", a: ["시", "shi", "シ"]}, {k: "ス", a: ["스", "su", "스"]}, {k: "セ", a: ["세", "se", "セ"]}, {k: "ソ", a: ["소", "so", "ソ"]},
+      {k: "サ", a: ["사", "sa", "サ"]}, {k: "シ", a: ["시", "shi", "シ"]}, {k: "ス", a: ["스", "su", "ス"]}, {k: "セ", a: ["세", "se", "セ"]}, {k: "ソ", a: ["소", "so", "ソ"]},
       {k: "タ", a: ["타", "ta", "タ"]}, {k: "チ", a: ["치", "chi", "チ"]}, {k: "ツ", a: ["츠", "tsu", "ツ"]}, {k: "テ", a: ["테", "te", "テ"]}, {k: "ト", a: ["토", "to", "ト"]},
       {k: "ナ", a: ["나", "na", "ナ"]}, {k: "ニ", a: ["니", "ni", "ニ"]}, {k: "ヌ", a: ["누", "nu", "ヌ"]}, {k: "ネ", a: ["네", "ne", "ネ"]}, {k: "ノ", a: ["노", "no", "ノ"]}
     ];
@@ -178,16 +172,20 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
-    // 원어민 발음(TTS) 재생
+    // 모바일 브라우저에 최적화된 원어민 음성 재생 함수
     function speakJapaneseKana(text) {
       if ('speechSynthesis' in window && text !== "") {
         window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ja-JP';
+        utterance.rate = 0.8;
+        utterance.volume = 1.0;
+
+        // 약간의 지연 시간을 주어 마이크 종료와 음성 출력이 충돌하지 않게 처리
         setTimeout(() => {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'ja-JP';
-          utterance.rate = 0.8;
           window.speechSynthesis.speak(utterance);
-        }, 50);
+        }, 150);
       }
     }
 
@@ -195,7 +193,7 @@
       if (!SpeechRecognition) return;
       
       recognition = new SpeechRecognition();
-      recognition.lang = 'ko-KR';
+      recognition.lang = 'ko-KR'; // 한국어 음성으로 받아들임 (아, 이, 우, 에, 오)
       recognition.interimResults = true;
       recognition.continuous = false;
 
@@ -209,14 +207,12 @@
 
         const cleanText = resultText.trim();
         if (cleanText !== "") {
-          document.getElementById("debugText").innerText = `인식된 발음: "${cleanText}"`;
           checkAnswer(cleanText);
         }
       };
 
       recognition.onerror = function(e) {
         console.log("음성인식 에러:", e.error);
-        document.getElementById("debugText").innerText = "인식 오류: 다시 발음해 보세요.";
       };
 
       recognition.onend = function() {
@@ -253,13 +249,11 @@
       startBtn.innerText = "🎙️ 음성인식 중...";
       startBtn.className = "btn-large start-btn listening";
       
-      // 파형 그래프 활성화
       document.getElementById("waveContainer").classList.add("active");
+      document.getElementById("status").innerText = "🎙️ 5초 안에 발음해 주세요!";
 
-      // 타이머 즉시 시작
       run5SecTimer();
 
-      // 음성 인식 시작
       if (!recognition) initSpeechEngine();
       try { recognition.stop(); } catch(e) {}
       
@@ -275,8 +269,6 @@
     function run5SecTimer() {
       clearQuizTimers();
       document.getElementById("result").innerText = "";
-      document.getElementById("debugText").innerText = "음성을 듣는 중...";
-      document.getElementById("status").innerText = "🎙️ 5초 안에 발음해 주세요!";
 
       const pContainer = document.getElementById("progressContainer");
       const pBar = document.getElementById("progressBar");
@@ -311,7 +303,7 @@
           res.innerText = `⏱️ 시간 초과! (정답: ${current.a[0]})`;
           document.getElementById("status").innerText = "다음 문제를 푸시려면 [시작]을 누르세요.";
 
-          // 틀렸을 때 원어민 발음 재생
+          // 오답/시간초과 시 원어민 발음 재생
           speakJapaneseKana(current.k);
           prepareNextQuestion();
         }
@@ -358,8 +350,7 @@
       if (activeQuestions.length === 0) return;
       prepareNextQuestion();
       document.getElementById("result").innerText = "";
-      document.getElementById("debugText").innerText = "";
-      document.getElementById("status").innerText = "[시작] 버튼을 누르면 5초간 음성 인식이 진행됩니다";
+      document.getElementById("status").innerText = "[시작] 버튼을 누르면 5초간 음성 인식이 진행됩니다.";
     }
 
     function prepareNextQuestion() {
@@ -395,7 +386,7 @@
         document.getElementById("status").innerText = "다음 문제를 푸시려면 [시작]을 누르세요.";
         document.getElementById("score").innerText = activeQuestions.length;
 
-        // 맞았을 때 원어민 발음 재생
+        // 정답 시 원어민 발음 재생
         speakJapaneseKana(current.k);
         prepareNextQuestion();
       }
