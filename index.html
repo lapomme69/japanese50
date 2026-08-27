@@ -157,7 +157,7 @@
 
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
-      recognition.lang = 'ko-KR'; // 한국어 발음 인식 (필요 시 ja-JP로 변경 가능)
+      recognition.lang = 'ko-KR';
       recognition.interimResults = true;
       recognition.continuous = true;
 
@@ -205,6 +205,7 @@
       }
     }
 
+    /* 사용자 클릭 시 마이크 권한을 직접 동기적으로 요청하도록 보완된 핵심 함수 */
     function startQuizSession() {
       if (!SpeechRecognition) {
         alert("현재 브라우저가 음성 인식을 지원하지 않습니다. 크롬(Chrome)을 이용해 주세요.");
@@ -217,37 +218,40 @@
         return;
       }
 
-      isListening = true;
-      isAnswered = false;
-
-      const startBtn = document.getElementById("startBtn");
-      startBtn.innerText = "🎙️ 음성인식 중...";
-      startBtn.className = "btn-large start-btn listening";
-
-      // 1. 음성 인식 엔진 즉시 시작
-      try {
-        recognition.stop();
-      } catch(e) {}
-
-      setTimeout(() => {
-        try {
-          recognition.start();
-        } catch(e) {
-          console.log("시작 에러:", e);
-        }
-      }, 50);
-
-      // 2. 마이크 그래픽 시각화 시작
+      // 1. [시작] 버튼 누른 직후 마이크 권한 요청
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(function(stream) {
           mediaStream = stream;
+          isListening = true;
+          isAnswered = false;
+
+          const startBtn = document.getElementById("startBtn");
+          startBtn.innerText = "🎙️ 음성인식 중...";
+          startBtn.className = "btn-large start-btn listening";
+
+          // 마이크 입력 시각화 그래픽 생성
           setupAudioVisualizer(stream);
+
+          // 2. 권한 획득 후 음성 인식 엔진 작동
+          try {
+            recognition.stop();
+          } catch(e) {}
+
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch(e) {
+              console.log("시작 에러:", e);
+            }
+          }, 100);
+
+          run5SecTimer();
         })
         .catch(function(err) {
-          console.log("마이크 시각화 차단됨:", err);
+          console.log("마이크 권한 거부됨:", err);
+          document.getElementById("status").innerText = "❌ 마이크 권한이 거부되었습니다. 스마트폰 설정에서 권한을 허용해 주세요.";
+          stopListeningUI();
         });
-
-      run5SecTimer();
     }
 
     function setupAudioVisualizer(stream) {
