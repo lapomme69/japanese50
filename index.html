@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>일본어 가나 음성 퀴즈 게임 V12.3</title>
+  <title>일본어 가나 음성 퀴즈 게임 V12.4</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #f0f4f8; padding: 20px; margin: 0; }
     .card { 
@@ -57,42 +57,32 @@
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
-    /* 음성인식 파형 애니메이션 그래프 */
+    /* 실시간 마이크 음량 감도 반응 파형 그래프 */
     .wave-container {
       width: 100%;
-      height: 36px;
+      height: 40px;
       background: #0f172a;
       border-radius: 8px;
       margin: 10px 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 8px;
       padding: 0 10px;
       box-sizing: border-box;
     }
     .wave-bar {
-      width: 6px;
-      height: 8px;
+      width: 8px;
+      height: 6px;
       background-color: #38bdf8;
-      border-radius: 3px;
-      transition: height 0.1s ease;
+      border-radius: 4px;
+      transition: height 0.05s ease, background-color 0.2s;
     }
     .wave-container.active .wave-bar {
-      animation: soundWave 1.2s ease-in-out infinite;
-    }
-    .wave-container.active .wave-bar:nth-child(1) { animation-delay: 0.0s; }
-    .wave-container.active .wave-bar:nth-child(2) { animation-delay: 0.2s; }
-    .wave-container.active .wave-bar:nth-child(3) { animation-delay: 0.4s; }
-    .wave-container.active .wave-bar:nth-child(4) { animation-delay: 0.2s; }
-    .wave-container.active .wave-bar:nth-child(5) { animation-delay: 0.0s; }
-
-    @keyframes soundWave {
-      0%, 100% { height: 8px; }
-      50% { height: 26px; }
+      background-color: #ef4444;
     }
 
-    /* 5초 프로그레스바 및 숫자 타이머 */
+    /* 5초 프로그레스바 및 타이머 */
     .timer-text { font-size: 16px; color: #ef4444; font-weight: bold; margin-top: 4px; min-height: 22px; }
     .progress-container {
       width: 100%;
@@ -108,7 +98,7 @@
       width: 100%;
       background-color: #ef4444;
       border-radius: 10px;
-      transition: width 0.1s linear;
+      transition: width 0.05s linear;
     }
 
     .status { margin-top: 8px; font-size: 14px; color: #475569; font-weight: bold; min-height: 36px; line-height: 1.4; word-break: keep-all; }
@@ -130,7 +120,7 @@
       ▶ 시작
     </button>
     
-    <!-- 음성인식 파형 그래프 -->
+    <!-- 실시간 마이크 감도 그래프 -->
     <div class="wave-container" id="waveContainer">
       <div class="wave-bar"></div>
       <div class="wave-bar"></div>
@@ -174,8 +164,24 @@
     let isAnswered = false;
     let timerInterval = null, timeoutId = null;
 
+    let audioCtx = null, analyser = null, microphone = null, animFrameId = null, mediaStream = null;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
+
+    // 원어민 발음(TTS) 개선 함수
+    function speakJapaneseKana(text) {
+      if ('speechSynthesis' in window && text !== "") {
+        window.speechSynthesis.cancel(); // 이전 재생 음성 초기화
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'ja-JP';
+          utterance.rate = 0.8;
+          utterance.volume = 1.0;
+          window.speechSynthesis.speak(utterance);
+        }, 100);
+      }
+    }
 
     function initSpeechEngine() {
       if (!SpeechRecognition) return;
@@ -202,6 +208,9 @@
 
       recognition.onerror = function(e) {
         console.log("음성인식 에러:", e.error);
+        if (e.error === 'no-speech') {
+          document.getElementById("debugText").innerText = "소리가 들리지 않습니다. 다시 발음해 주세요.";
+        }
       };
 
       recognition.onend = function() {
@@ -209,16 +218,6 @@
           try { recognition.start(); } catch(e) {}
         }
       };
-    }
-
-    function speakJapaneseKana(text) {
-      if ('speechSynthesis' in window && text !== "") {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ja-JP';
-        utterance.rate = 0.8;
-        window.speechSynthesis.speak(utterance);
-      }
     }
 
     function toggleQuiz() {
@@ -229,7 +228,7 @@
       }
     }
 
-    function startQuizSession() {
+    async function startQuizSession() {
       if (!SpeechRecognition) {
         alert("현재 브라우저가 음성 인식을 지원하지 않습니다.");
         return;
@@ -247,9 +246,16 @@
       const startBtn = document.getElementById("startBtn");
       startBtn.innerText = "🎙️ 음성인식 중...";
       startBtn.className = "btn-large start-btn listening";
-
-      // 그래프 애니메이션 활성화
       document.getElementById("waveContainer").classList.add("active");
+
+      // 실시간 마이크 오디오 음량 분석 시작
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        startAudioVisualizer(mediaStream);
+      } catch (err) {
+        console.log("마이크 스트림 오류:", err);
+        document.getElementById("status").innerText = "❌ 마이크에 연결할 수 없습니다.";
+      }
 
       // 음성 인식 실행
       if (!recognition) initSpeechEngine();
@@ -261,10 +267,49 @@
         } catch(e) {
           console.log("인식 시작 에러:", e);
         }
-      }, 50);
+      }, 100);
 
-      // 5초 타이머 작동
       run5SecTimer();
+    }
+
+    // 실시간 마이크 음량 반응 파형 제어
+    function startAudioVisualizer(stream) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        microphone = audioCtx.createMediaStreamSource(stream);
+
+        analyser.fftSize = 32;
+        microphone.connect(analyser);
+
+        const bars = document.querySelectorAll('.wave-bar');
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function updateVolumeBars() {
+          if (!isListening) return;
+          analyser.getByteFrequencyData(dataArray);
+
+          bars.forEach((bar, index) => {
+            const val = dataArray[index % dataArray.length];
+            const height = Math.max(6, Math.min(32, (val / 255) * 40));
+            bar.style.height = `${height}px`;
+          });
+
+          animFrameId = requestAnimationFrame(updateVolumeBars);
+        }
+        updateVolumeBars();
+      } catch (e) {
+        console.log("시각화 초기화 실패:", e);
+      }
+    }
+
+    function stopAudioVisualizer() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+      if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+
+      const bars = document.querySelectorAll('.wave-bar');
+      bars.forEach(bar => bar.style.height = '6px');
     }
 
     function run5SecTimer() {
@@ -306,6 +351,7 @@
           res.innerText = `⏱️ 시간 초과 / 틀렸습니다! (정답: ${current.a[0]})`;
           document.getElementById("status").innerText = "다음 문제를 푸시려면 [시작]을 누르세요.";
 
+          // 틀렸을 때 원어민 발음 재생
           speakJapaneseKana(current.k);
           prepareNextQuestion();
         }
@@ -320,6 +366,7 @@
     function stopListeningUI() {
       isListening = false;
       clearQuizTimers();
+      stopAudioVisualizer();
 
       if (recognition) {
         try { recognition.stop(); } catch(e) {}
@@ -389,6 +436,7 @@
         document.getElementById("status").innerText = "다음 문제를 푸시려면 [시작]을 누르세요.";
         document.getElementById("score").innerText = activeQuestions.length;
 
+        // 맞았을 때 원어민 발음 재생
         speakJapaneseKana(current.k);
         prepareNextQuestion();
       }
