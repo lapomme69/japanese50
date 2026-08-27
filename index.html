@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>일본어 가나 음성 퀴즈 게임 V12.6</title>
+  <title>일본어 가나 음성 퀴즈 게임 V12.7</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #f0f4f8; padding: 20px; margin: 0; }
     .card { 
@@ -158,7 +158,7 @@
     const kData = [
       {k: "ア", a: ["아", "a", "ア"]}, {k: "イ", a: ["이", "i", "イ"]}, {k: "ウ", a: ["우", "u", "ウ"]}, {k: "エ", a: ["에", "e", "エ"]}, {k: "オ", a: ["오", "o", "オ"]},
       {k: "カ", a: ["카", "ka", "カ"]}, {k: "キ", a: ["키", "ki", "キ"]}, {k: "ク", a: ["쿠", "ku", "ク"]}, {k: "ケ", a: ["케", "ke", "ケ"]}, {k: "コ", a: ["코", "ko", "コ"]},
-      {k: "サ", a: ["사", "sa", "サ"]}, {k: "シ", a: ["시", "shi", "シ"]}, {k: "ス", a: ["스", "su", "ス"]}, {k: "セ", a: ["세", "se", "セ"]}, {k: "ソ", a: ["소", "so", "ソ"]},
+      {k: "サ", a: ["사", "sa", "サ"]}, {k: "シ", a: ["시", "shi", "シ"]}, {k: "ス", a: ["스", "su", "스"]}, {k: "セ", a: ["세", "se", "セ"]}, {k: "ソ", a: ["소", "so", "ソ"]},
       {k: "タ", a: ["타", "ta", "タ"]}, {k: "チ", a: ["치", "chi", "チ"]}, {k: "ツ", a: ["츠", "tsu", "ツ"]}, {k: "テ", a: ["테", "te", "テ"]}, {k: "ト", a: ["토", "to", "ト"]},
       {k: "ナ", a: ["나", "na", "ナ"]}, {k: "ニ", a: ["니", "ni", "ニ"]}, {k: "ヌ", a: ["누", "nu", "ヌ"]}, {k: "ネ", a: ["네", "ne", "ネ"]}, {k: "ノ", a: ["노", "no", "ノ"]}
     ];
@@ -172,20 +172,25 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
-    // 모바일 브라우저에 최적화된 원어민 음성 재생 함수
+    // 모바일 오디오 시스템 차단 해제 및 원어민 TTS 출력
+    function unlockTTS() {
+      if ('speechSynthesis' in window) {
+        const dummy = new SpeechSynthesisUtterance('');
+        window.speechSynthesis.speak(dummy);
+      }
+    }
+
     function speakJapaneseKana(text) {
       if ('speechSynthesis' in window && text !== "") {
         window.speechSynthesis.cancel();
         
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ja-JP';
-        utterance.rate = 0.8;
-        utterance.volume = 1.0;
-
-        // 약간의 지연 시간을 주어 마이크 종료와 음성 출력이 충돌하지 않게 처리
         setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'ja-JP';
+          utterance.rate = 0.8;
+          utterance.volume = 1.0;
           window.speechSynthesis.speak(utterance);
-        }, 150);
+        }, 200);
       }
     }
 
@@ -193,7 +198,7 @@
       if (!SpeechRecognition) return;
       
       recognition = new SpeechRecognition();
-      recognition.lang = 'ko-KR'; // 한국어 음성으로 받아들임 (아, 이, 우, 에, 오)
+      recognition.lang = 'ko-KR';
       recognition.interimResults = true;
       recognition.continuous = false;
 
@@ -223,6 +228,7 @@
     }
 
     function toggleQuiz() {
+      unlockTTS(); // 클릭 시 오디오 락 해제
       if (isListening) {
         stopQuiz();
       } else {
@@ -303,7 +309,6 @@
           res.innerText = `⏱️ 시간 초과! (정답: ${current.a[0]})`;
           document.getElementById("status").innerText = "다음 문제를 푸시려면 [시작]을 누르세요.";
 
-          // 오답/시간초과 시 원어민 발음 재생
           speakJapaneseKana(current.k);
           prepareNextQuestion();
         }
@@ -386,7 +391,6 @@
         document.getElementById("status").innerText = "다음 문제를 푸시려면 [시작]을 누르세요.";
         document.getElementById("score").innerText = activeQuestions.length;
 
-        // 정답 시 원어민 발음 재생
         speakJapaneseKana(current.k);
         prepareNextQuestion();
       }
